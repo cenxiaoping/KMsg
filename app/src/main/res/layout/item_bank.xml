@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="80dp"
+    android:layout_margin="3dp">
+
+    <TextView
+        android:id="@+id/tv_bank_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:text="......" />
+
+
+    <TextView
+        android:id="@+id/tv_bank_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:ellipsize="end"
+        android:maxEms="10"
+        android:maxLines="1"
+        android:text="..........." />
+
+    <Button
+        android:id="@+id/btn_delete"
+        android:layout_width="100dp"
+        android:layout_height="40dp"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="3dp"
+        android:background="@android:color/holo_green_light"
+        android:text="删除"
+        android:textColor="@android:color/white"
+        android:textSize="16sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2px"
+        android:layout_alignParentBottom="true"
+        android:background="@android:color/darker_gray" />
+
+</RelativeLayout>

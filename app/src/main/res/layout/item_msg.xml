@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:layout_height="100dp"
+    android:layout_margin="3dp">
+
+    <TextView
+        android:id="@+id/tv_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:text="短信id"
+        />
+
+    <TextView
+        android:id="@+id/tv_new"
+        android:layout_width="65dp"
+        android:layout_height="wrap_content"
+        android:text="新"
+        android:layout_alignParentRight="true"
+        android:textSize="16sp"
+        android:layout_marginRight="3dp"
+        android:gravity="center_horizontal"
+        android:textColor="@android:color/holo_orange_dark"
+        />
+    <TextView
+        android:id="@+id/tv_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/tv_id"
+        android:layout_marginLeft="5dp"
+        android:text="日期"
+        />
+
+    <TextView
+        android:id="@+id/tv_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentBottom="true"
+        android:text="电话号码"
+        />
+
+    <TextView
+        android:id="@+id/tv_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="........"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="75dp"
+        android:layout_marginLeft="5dp"
+        android:maxLines="4"
+        />
+
+    <Button
+        android:id="@+id/btn_msg"
+        android:layout_width="65dp"
+        android:layout_height="30dp"
+        android:layout_centerVertical="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="3dp"
+        android:text="处理"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:background="@drawable/btn_round"
+        />
+<View
+    android:layout_width="match_parent"
+    android:layout_height="2px"
+    android:background="@android:color/darker_gray"
+    android:layout_alignParentBottom="true"
+    />
+</RelativeLayout>
