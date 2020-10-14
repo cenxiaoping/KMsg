@@ -14,3 +14,4 @@
 .cxx
 /app/release/
 /.idea/
+/app/src/main/java/com/kok/msg/gen/

@@ -81,18 +81,18 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder> {
             holder.msgBtn.setText("完成");
         } else {
             //判断是否过期
-            if (smsEntity.isOutDate) {
-                holder.msgBtn.setClickable(false);
-                if(smsEntity.isUploadError){
-                    holder.msgBtn.setText("失败");
-                }else{
-                    holder.msgBtn.setText("已超时");
-                }
-
-            } else {
-                holder.msgBtn.setClickable(true);
-                holder.msgBtn.setText("回调");
-            }
+//            if (smsEntity.isOutDate) {
+//                holder.msgBtn.setClickable(false);
+//                if(smsEntity.isUploadError){
+//                    holder.msgBtn.setText("失败");
+//                }else{
+//                    holder.msgBtn.setText("已超时");
+//                }
+//
+//            } else {
+//                holder.msgBtn.setClickable(true);
+//                holder.msgBtn.setText("回调");
+//            }
         }
     }
 
