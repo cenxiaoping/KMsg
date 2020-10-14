@@ -63,7 +63,7 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
     private IntentFilter filter;
     private LoadingDialog loadingDialog;
 
-    public static final int MSG_OUT_MINUTES = 20;//短信过期时间为10分钟
+    public static final int MSG_OUT_MINUTES = 15;//短信过期时间
     private SmartRefreshLayout refreshView;
 
     //    private SmsReceiver receiver;

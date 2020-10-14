@@ -36,6 +36,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    //统一打包命名规则
+    applicationVariants.all { variant ->
+
+        variant.outputs.all {
+            outputFileName =  "Kmsg_${variant.versionName}_${variant.buildType.name}_${releaseTime()}.apk"
+        }
+    }
+}
+//获取编译时间
+static def releaseTime() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
 }
 
 dependencies {
