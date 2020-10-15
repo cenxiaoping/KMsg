@@ -17,7 +17,7 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder> {
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         View msgView;
-        TextView idTv, conentTv, numberTv, dateTv, tv_new;
+        TextView idTv, conentTv, numberTv, dateTv, tv_new, tv_failcount;
         Button msgBtn;
 
         public ViewHolder(@NonNull View itemView) {
@@ -29,6 +29,7 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder> {
             dateTv = (TextView) itemView.findViewById(R.id.tv_date);
             msgBtn = (Button) itemView.findViewById(R.id.btn_msg);
             tv_new = (TextView) itemView.findViewById(R.id.tv_new);
+            tv_failcount = (TextView) itemView.findViewById(R.id.tv_failcount);
         }
 
     }
@@ -62,7 +63,7 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder> {
         holder.numberTv.setText("" + smsEntity.getAddress());
         holder.conentTv.setText("" + smsEntity.getBody());
         holder.dateTv.setText("" + smsEntity.getDate());
-        int type = smsEntity.getState();
+        int state = smsEntity.getState();
         if (position < 5) {
             holder.tv_new.setVisibility(View.VISIBLE);
         } else {
@@ -76,11 +77,38 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder> {
                 }
             }
         });
-        if (type == 1) {
+
+//        0表示未发送到服务端,1表示已经发送到服务端,2表示上传失败，3表示短信已过期
+        holder.tv_failcount.setVisibility(View.GONE);
+        if (state == 1) {
             holder.msgBtn.setClickable(false);
             holder.msgBtn.setText("完成");
+            if(smsEntity.getFailCount()>0){
+                holder.tv_failcount.setVisibility(View.VISIBLE);
+                int count = smsEntity.getFailCount()+1;
+                holder.tv_failcount.setText("请求次数：" + count);
+            }
+        } else if (state == 0) {
+            holder.msgBtn.setClickable(true);
+            holder.msgBtn.setText("回调");
+        } else if (state == 2) {
+            holder.msgBtn.setClickable(false);
+            holder.msgBtn.setText("失败");
+            if(smsEntity.getFailCount()>0){
+                holder.tv_failcount.setVisibility(View.VISIBLE);
+                holder.tv_failcount.setText("请求次数：" + smsEntity.getFailCount());
+            }
+        } else if (state == 3) {
+            holder.msgBtn.setClickable(false);
+            holder.msgBtn.setText("已超时");
+            if(smsEntity.getFailCount()>0){
+                holder.tv_failcount.setVisibility(View.VISIBLE);
+                holder.tv_failcount.setText("请求次数：" + smsEntity.getFailCount());
+            }
         } else {
-            //判断是否过期
+        }
+
+        //判断是否过期
 //            if (smsEntity.isOutDate) {
 //                holder.msgBtn.setClickable(false);
 //                if(smsEntity.isUploadError){
@@ -93,7 +121,6 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder> {
 //                holder.msgBtn.setClickable(true);
 //                holder.msgBtn.setText("回调");
 //            }
-        }
     }
 
     @Override

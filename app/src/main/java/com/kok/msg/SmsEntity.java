@@ -16,18 +16,23 @@ public class SmsEntity {
     public String address;//对方号码
     public String type;//短信类型
     public String date;//短信时间
+    public long dateLong;//短信时间
     public String body;//短信内容
-    public int state =0;//短信状态，0表示未发送到服务端,1表示已经发送到服务端,2表示上传失败，3表示短信已过期
+    public int failCount;//失败次数
+    public int state = 0;//短信状态，0表示未发送到服务端,1表示已经发送到服务端,2表示上传失败，3表示短信已过期
     public int uploadCount;//上传次数
-    @Generated(hash = 96682159)
+    @Generated(hash = 1036397474)
     public SmsEntity(String _id, String thread_id, String address, String type,
-            String date, String body, int state, int uploadCount) {
+            String date, long dateLong, String body, int failCount, int state,
+            int uploadCount) {
         this._id = _id;
         this.thread_id = thread_id;
         this.address = address;
         this.type = type;
         this.date = date;
+        this.dateLong = dateLong;
         this.body = body;
+        this.failCount = failCount;
         this.state = state;
         this.uploadCount = uploadCount;
     }
@@ -64,11 +69,23 @@ public class SmsEntity {
     public void setDate(String date) {
         this.date = date;
     }
+    public long getDateLong() {
+        return this.dateLong;
+    }
+    public void setDateLong(long dateLong) {
+        this.dateLong = dateLong;
+    }
     public String getBody() {
         return this.body;
     }
     public void setBody(String body) {
         this.body = body;
+    }
+    public int getFailCount() {
+        return this.failCount;
+    }
+    public void setFailCount(int failCount) {
+        this.failCount = failCount;
     }
     public int getState() {
         return this.state;

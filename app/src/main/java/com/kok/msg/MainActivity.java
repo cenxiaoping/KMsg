@@ -29,6 +29,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import com.kok.msg.gen.SmsEntityDao;
 import com.kok.msg.utils.GreenDaoManager;
 import com.scwang.smart.refresh.layout.SmartRefreshLayout;
 import com.scwang.smart.refresh.layout.api.RefreshLayout;
@@ -39,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -75,7 +77,7 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
             SmsEntity smsEntity = smsEntityList.get(position);
             if (smsEntity != null && smsEntity.getState() == 0) {
                 sign = Md5Tools.getMD5(smsEntity.getAddress() + listSharedPreference.getDataStr(Constants.SP_USER_NAME));
-                sendMsg(smsEntity.get_id(), smsEntity.getAddress(), smsEntity.getBody(), smsEntity.getAddress(), sign);
+                sendMsg(smsEntity, sign);
             }
         } catch (Exception exeption) {
             exeption.printStackTrace();
@@ -346,8 +348,13 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
     }
 
 
-    private void sendMsg(final String _id, final String date, final String content, final String sendPhone, final String sign) {
-        requestRetrofit.postMsg(content, sendPhone, sign, new Observer<ResponseData>() {
+    /**
+     * 上传短信到服务器
+     *
+     * @param sign
+     */
+    private void sendMsg(final SmsEntity entity, final String sign) {
+        requestRetrofit.postMsg(entity.getBody(), entity.getAddress(), sign, new Observer<ResponseData>() {
             @Override
             public void onSubscribe(Disposable d) {
                 showLoading();
@@ -362,18 +369,10 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
                         hideLoading();
                         statusFailureCount = 0;
                         //处理成功则保存该短信的处理状态
-                        List<String> dataDidList = listSharedPreference.getDataList(Constants.SP_MSG);
-                        dataDidList.add(_id);
-                        listSharedPreference.saveDataList(Constants.SP_MSG, dataDidList);
-                        //更新对应列表
-                        for (int i = 0; i < smsEntityList.size(); i++) {
-                            String id = smsEntityList.get(i).get_id();
-                            if (id.equals(_id)) {
-                                smsEntityList.get(i).setState(1);
-                                recyclerView.getAdapter().notifyDataSetChanged();
-                                break;
-                            }
-                        }
+                        entity.setState(1);
+                        GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().update(entity);
+
+                        recyclerView.getAdapter().notifyDataSetChanged();
                         Toast.makeText(MainActivity.this, "已发送处理", Toast.LENGTH_SHORT).show();
                     } else if (status == 600) {
                         statusFailureCount++;
@@ -399,7 +398,7 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
                                     int status = responseData.getStatus();
                                     String msg = responseData.getMsg();
                                     if (status == 200) {
-                                        sendMsg(_id, date, content, sendPhone, sign);
+                                        sendMsg(entity, sign);
                                     } else {
                                         exitLogin();
                                     }
@@ -418,16 +417,12 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
                         });
                     } else {
                         hideLoading();
-                        List<String> dataDidList = listSharedPreference.getDataList(Constants.SP_ERROR);
-                        dataDidList.add(_id);
-                        listSharedPreference.saveDataList(Constants.SP_ERROR, dataDidList);
+                        updateFaile(entity);
 
                         Toast.makeText(MainActivity.this, "出现其他错误:" + msg, Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    List<String> dataDidList = listSharedPreference.getDataList(Constants.SP_ERROR);
-                    dataDidList.add(_id);
-                    listSharedPreference.saveDataList(Constants.SP_ERROR, dataDidList);
+                    updateFaile(entity);
 
                     hideLoading();
                     Toast.makeText(MainActivity.this, "没有返回任何数据", Toast.LENGTH_SHORT).show();
@@ -437,9 +432,7 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
             @Override
             public void onError(Throwable e) {
                 hideLoading();
-                List<String> dataDidList = listSharedPreference.getDataList(Constants.SP_ERROR);
-                dataDidList.add(_id);
-                listSharedPreference.saveDataList(Constants.SP_ERROR, dataDidList);
+                updateFaile(entity);
 
                 Toast.makeText(MainActivity.this, "网络请求失败", Toast.LENGTH_SHORT).show();
             }
@@ -449,6 +442,21 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
 
             }
         });
+    }
+
+    public void updateFaile(SmsEntity entity) {
+        int failCount = entity.getFailCount();
+        int count = failCount + 1;
+        //设置状态为失败
+        entity.setState(2);
+        //设置失败的次数
+        entity.setFailCount(count);
+        SmsEntity smsEntityDb = GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().load(entity.get_id());
+        smsEntityDb.setState(2);
+        smsEntityDb.setFailCount(count);
+        GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().update(smsEntityDb);
+
+        getSmsData();
     }
 
     public static void toMain(Context context) {
@@ -518,138 +526,109 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
             Date date = new Date(dateLong);
             String dateShow = sdf.format(date);
             SmsEntity smsEntity = new SmsEntity();
-            String idDate = (_id + dateLong).trim();
-            smsEntity.set_id(idDate);
+//            String idDate = (_id + dateLong).trim();
+            smsEntity.set_id(dateString);
             smsEntity.setThread_id(thread_id);
             smsEntity.setAddress(address);
             smsEntity.setDate(dateShow);
+            smsEntity.setDateLong(dateLong);
             smsEntity.setBody(body);
             smsEntity.setType(type);
 
-            //短信是否过期
-            Calendar currentTime = Calendar.getInstance();
-            currentTime.add(Calendar.MINUTE, -15);
+            //过滤短信，只获取指定号码的
+            if (filterSms(smsEntity, bankNumberEntityList)) {
 
-            Calendar smsTime = Calendar.getInstance();
-            smsTime.setTime(new Date(dateLong));
+                SmsEntity smsEntityDb = GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().load(smsEntity.get_id());
 
-            if (smsTime.before(currentTime)) {
-                //已经超时了
-                smsEntity.setState(3);
-            } else {
-                SmsEntity smsEntityDb = GreenDaoManager.getInstance().getmDaoSession().getSmsEntityDao().load(smsEntity.get_id());
-                if (smsEntityDb != null) {
+                //短信是否过期
+                if (isBefore(new Date(dateLong))) {
+                    //已经超时了
+                    if (smsEntityDb == null) {
+                        smsEntity.setState(3);
+                        GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().insert(smsEntity);
+                    }else{
+                        if(smsEntityDb.getState()==0){
+                            smsEntityDb.setState(3);
+                            GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().update(smsEntityDb);
+                        }
+                    }
                 } else {
-                    //未上传过
-                    smsEntity.setState(0);
+                    if (smsEntityDb == null) {
+
+                        //未上传过
+                        smsEntity.setState(0);
+                        //符合条件的短信，保存到数据库
+                        GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().insert(smsEntity);
+
+                    }
                 }
             }
-
-            //暂时注释掉
-//            if (!filterSms(smsEntity, bankCardEntityList, bankNumberEntityList)) {
-//                index++;
-//                continue;
-//            } else {
-//                index++;
-//            }
-
-
-//            int status = getState(smsEntity.get_id());
-//
-//            //判断状态
-//            smsEntity.setState(status);
-            //上传状态
-//            smsEntity.setUploadError(getUploadState(smsEntity.get_id()));
-            int length = smsEntityList.size();
-            if (index < length) {
-                smsEntityList.add(index - 1, smsEntity);
-            } else {
-                smsEntityList.add(smsEntity);
-            }
-            //未提交 且没有过期的会提交
-//            if (smsEntity != null && status == 0 && !smsEntity.isOutDate) {
-//                try {
-//                    Toast.makeText(MainActivity.this, "处理短信：" + address, Toast.LENGTH_SHORT).show();
-//                    sign = Md5Tools.getMD5(smsEntity.getAddress() + listSharedPreference.getDataStr(Constants.SP_USER_NAME));
-//                    sendMsg(smsEntity.get_id(), smsEntity.getAddress(), smsEntity.getBody(), smsEntity.getAddress(), sign);
-//                } catch (NoSuchAlgorithmException e) {
-//                    e.printStackTrace();
-//                }
-//            }
         }
-        recyclerView.getAdapter().notifyDataSetChanged();
-        Toast.makeText(MainActivity.this, "短信总数:" + smsEntityList.size(), Toast.LENGTH_LONG).show();
+
+        getSmsData();
+
+//        Toast.makeText(MainActivity.this, "短信总数:" + smsEntityList.size(), Toast.LENGTH_LONG).show();
         cursor.close();
+
+        for (int i = 0; i < smsEntityList.size(); i++) {
+            SmsEntity entity = smsEntityList.get(i);
+
+            if ((entity.state == 0 || entity.state == 2) && !isBefore(new Date(entity.dateLong))) {
+                Toast.makeText(MainActivity.this, "处理短信：" + entity.getAddress(), Toast.LENGTH_SHORT).show();
+                try {
+                    sign = Md5Tools.getMD5(entity.getAddress() + listSharedPreference.getDataStr(Constants.SP_USER_NAME));
+                    sendMsg(entity, sign);
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
+    private boolean isBefore(Date date) {
+        //短信是否过期
+        Calendar currentTime = Calendar.getInstance();
+        currentTime.add(Calendar.MINUTE, 0 - MSG_OUT_MINUTES);
 
-//    private SmsEntity getState(String id) {
-//        return GreenDaoManager.getInstance().getmDaoSession().getSmsEntityDao().load(id);
+        Calendar smsTime = Calendar.getInstance();
+        smsTime.setTime(date);
 
-//        List list = listSharedPreference.getDataList(Constants.SP_MSG);
-//        if (list == null || list.size() == 0) {
-//            return 0;
-//        }
-//        for (int i = 0; i < list.size(); i++) {
-//            String pId = (String) list.get(i);
-//            if (pId.equals(idDate)) {
-//                return 1;
-//            }
-//        }
-//        return 0;
-//    }
+        return smsTime.before(currentTime);
+    }
 
-    private boolean getUploadState(String idDate) {
-        List list = listSharedPreference.getDataList(Constants.SP_ERROR);
-        if (list == null || list.size() == 0) {
-            return false;
+    /**
+     * 从数据库获取短信数据
+     */
+    private void getSmsData() {
+        List<SmsEntity> smsEntities = GreenDaoManager.getInstance().getNewSession().getSmsEntityDao().queryBuilder().orderDesc(SmsEntityDao.Properties.DateLong).list();
+        if (smsEntities != null && smsEntities.size() > 0) {
+            smsEntityList.clear();
+            smsEntityList.addAll(smsEntities);
         }
-        for (int i = 0; i < list.size(); i++) {
-            String pId = (String) list.get(i);
-            if (pId.equals(idDate)) {
-                return true;
-            }
-        }
-        return false;
+
+        recyclerView.getAdapter().notifyDataSetChanged();
     }
 
     /**
      * 短信过滤
      */
-    private boolean filterSms(SmsEntity smsEntity, List<BankCardEntity> bankCardEntityList, List<BankNumberEntity> bankNumberEntityList) {
-//        Log.d("", "短信过滤中:" + address);
-//        Toast.makeText(MainActivity.this,"短信过滤中:"+address,Toast.LENGTH_SHORT).show();
-//        Toast.makeText(MainActivity.this,"短信过滤中:"+body,Toast.LENGTH_SHORT).show();
-        if (TextUtils.isEmpty(smsEntity.getAddress()) || TextUtils.isEmpty(smsEntity.getBody()) || smsEntity.getAddress().length() < 4) {
+    private boolean filterSms(SmsEntity smsEntity, List<BankNumberEntity> bankNumberEntityList) {
+
+        String address = smsEntity.getAddress();
+        if (address.substring(0, 3).contains("+86")) {
+            address = address.replace("+86", "").trim();
+        } else if (address.substring(0, 3).contains("86")) {
+            address = address.replace("86", "").trim();
+        }
+        if (TextUtils.isEmpty(address)) {
             return false;
         }
-        //如果短信已经存在列表中
-        for (int i = 0; i < smsEntityList.size(); i++) {
-            if (smsEntity.get_id().equals(smsEntityList.get(i).get_id())) {
-                //则只更新对应时间
-                //短信是否过期
-                SmsEntity smsEntityTemp = smsEntityList.get(i);
-                int msgDate = (int) (DateUtils.strToDateLong(smsEntity.getDate()).getTime() / 60000);
-                int currentDate = (int) (System.currentTimeMillis() / 60000);//分钟
-//                smsEntityTemp.setOutDate((currentDate - msgDate) > MSG_OUT_MINUTES ? true : false);
-                return false;
+        for (int i = 0; i < bankNumberEntityList.size(); i++) {
+            String bankNumber = bankNumberEntityList.get(i).getHot_line().trim();
+            if (address.equals(bankNumber)) {
+                return true;
             }
         }
-
-//        if (address.substring(0, 3).contains("+86")) {
-//            address = address.replace("+86", "").trim();
-//        } else if (address.substring(0, 3).contains("86")) {
-//            address = address.replace("86", "").trim();
-//        }
-//        if (TextUtils.isEmpty(address)) {
-//            return false;
-//        }
-//        for (int i = 0; i < bankNumberEntityList.size(); i++) {
-//            String bankNumber = bankNumberEntityList.get(i).getHot_line().trim();
-//            if (address.equals(bankNumber)) {
-//                return true;
-//            }
-//        }
         return false;
     }
 
@@ -667,32 +646,7 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
     protected void onPause() {
         // TODO Auto-generated method stub
         super.onPause();
-        if (smsContentObserver != null) {
-            getContentResolver().unregisterContentObserver(smsContentObserver);// 取消监听短信数据库的变化
-        }
-
     }
-
-//    public class SmsReceiver extends BroadcastReceiver {
-//
-//        @RequiresApi(api = Build.VERSION_CODES.M)
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//
-//            StringBuilder content = new StringBuilder();//用于存储短信内容
-//            String sender = null;//存储短信发送方手机号
-//            Bundle bundle = intent.getExtras();//通过getExtras()方法获取短信内容
-//            String format = intent.getStringExtra("format");
-//            if (bundle != null) {
-//                Object[] pdus = (Object[]) bundle.get("pdus");//根据pdus关键字获取短信字节数组，数组内的每个元素都是一条短信
-//                for (Object object : pdus) {
-//                    SmsMessage message = SmsMessage.createFromPdu((byte[]) object, format);//将字节数组转化为Message对象
-//                    sender = message.getOriginatingAddress();//获取短信手机号
-//                    content.append(message.getMessageBody());//获取短信内容
-//                }
-//            }
-//        }
-//    }
 
     @Override
     protected void onDestroy() {
@@ -700,6 +654,10 @@ public class MainActivity extends Activity implements MsgAdapter.OnMsgClick {
         if (loadingDialog != null) {
             loadingDialog.dismiss();
             loadingDialog.clear();
+        }
+
+        if (smsContentObserver != null) {
+            getContentResolver().unregisterContentObserver(smsContentObserver);// 取消监听短信数据库的变化
         }
     }
 

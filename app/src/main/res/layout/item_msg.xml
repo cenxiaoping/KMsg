@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="100dp"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_margin="3dp">
 
     <TextView
@@ -39,6 +40,16 @@
         android:layout_alignParentLeft="true"
         android:layout_alignParentBottom="true"
         android:text="电话号码"
+        />
+
+    <TextView
+        android:id="@+id/tv_failcount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_toRightOf="@id/tv_number"
+        android:layout_alignParentBottom="true"
+        tools:text="错误次数：1"
         />
 
     <TextView

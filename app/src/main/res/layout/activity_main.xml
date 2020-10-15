@@ -64,6 +64,7 @@
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            tools:listitem="@layout/item_msg"
             android:layout_marginTop="8dp" />
     </com.scwang.smart.refresh.layout.SmartRefreshLayout>
 </LinearLayout>
